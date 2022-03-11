@@ -186,16 +186,8 @@ class Mask:
                 sized image, should be in the form of [shift_x, shift_y]
         """
 
-        if len(bool_mask) > 0:
-            has_bool_mask = True
-        else:
-            has_bool_mask = False
-
-        if has_bool_mask:
-            self.bool_mask = bool_mask.astype(bool)
-        else:
-            self.bool_mask = None
-
+        has_bool_mask = len(bool_mask) > 0
+        self.bool_mask = bool_mask.astype(bool) if has_bool_mask else None
         self.shift_x = shift_amount[0]
         self.shift_y = shift_amount[1]
 
@@ -270,8 +262,7 @@ class Mask:
             ...
         ]
         """
-        coco_segmentation = get_coco_segmentation_from_bool_mask(self.bool_mask)
-        return coco_segmentation
+        return get_coco_segmentation_from_bool_mask(self.bool_mask)
 
 
 class ObjectAnnotation:
@@ -553,7 +544,7 @@ class ObjectAnnotation:
         # set bbox
         self.bbox = BoundingBox(bbox, shift_amount)
 
-        category_name = category_name if category_name else str(category_id)
+        category_name = category_name or str(category_id)
         self.category = Category(
             id=category_id,
             name=category_name,
@@ -565,53 +556,41 @@ class ObjectAnnotation:
         """
         Returns sahi.utils.coco.CocoAnnotation representation of ObjectAnnotation.
         """
-        if self.mask:
-            coco_annotation = CocoAnnotation.from_coco_segmentation(
+        return CocoAnnotation.from_coco_segmentation(
                 segmentation=self.mask.to_coco_segmentation(),
                 category_id=self.category.id,
                 category_name=self.category.name,
-            )
-        else:
-            coco_annotation = CocoAnnotation.from_coco_bbox(
+            ) if self.mask else CocoAnnotation.from_coco_bbox(
                 bbox=self.bbox.to_coco_bbox(),
                 category_id=self.category.id,
                 category_name=self.category.name,
             )
-        return coco_annotation
 
     def to_coco_prediction(self):
         """
         Returns sahi.utils.coco.CocoPrediction representation of ObjectAnnotation.
         """
-        if self.mask:
-            coco_prediction = CocoPrediction.from_coco_segmentation(
+        return CocoPrediction.from_coco_segmentation(
                 segmentation=self.mask.to_coco_segmentation(),
                 category_id=self.category.id,
                 category_name=self.category.name,
                 score=1,
-            )
-        else:
-            coco_prediction = CocoPrediction.from_coco_bbox(
+            ) if self.mask else CocoPrediction.from_coco_bbox(
                 bbox=self.bbox.to_coco_bbox(),
                 category_id=self.category.id,
                 category_name=self.category.name,
                 score=1,
             )
-        return coco_prediction
 
     def to_shapely_annotation(self):
         """
         Returns sahi.utils.shapely.ShapelyAnnotation representation of ObjectAnnotation.
         """
-        if self.mask:
-            shapely_annotation = ShapelyAnnotation.from_coco_segmentation(
+        return ShapelyAnnotation.from_coco_segmentation(
                 segmentation=self.mask.to_coco_segmentation(),
-            )
-        else:
-            shapely_annotation = ShapelyAnnotation.from_coco_bbox(
+            ) if self.mask else ShapelyAnnotation.from_coco_bbox(
                 bbox=self.bbox.to_coco_bbox(),
             )
-        return shapely_annotation
 
     def to_imantics_annotation(self):
         """
@@ -627,15 +606,14 @@ class ObjectAnnotation:
         imantics_category = imantics.Category(id=self.category.id, name=self.category.name)
         if self.mask is not None:
             imantics_mask = imantics.Mask.create(self.mask.bool_mask)
-            imantics_annotation = imantics.annotation.Annotation.from_mask(
+            return imantics.annotation.Annotation.from_mask(
                 mask=imantics_mask, category=imantics_category
             )
         else:
             imantics_bbox = imantics.BBox.create(self.bbox.to_voc_bbox())
-            imantics_annotation = imantics.annotation.Annotation.from_bbox(
+            return imantics.annotation.Annotation.from_bbox(
                 bbox=imantics_bbox, category=imantics_category
             )
-        return imantics_annotation
 
     def deepcopy(self):
         """

@@ -14,9 +14,7 @@ def get_shapely_box(x: int, y: int, width: int, height: int) -> Polygon:
     miny = y
     maxx = x + width
     maxy = y + height
-    shapely_box = box(minx, miny, maxx, maxy)
-
-    return shapely_box
+    return box(minx, miny, maxx, maxy)
 
 
 def get_shapely_multipolygon(coco_segmentation: List[List]) -> MultiPolygon:
@@ -25,12 +23,10 @@ def get_shapely_multipolygon(coco_segmentation: List[List]) -> MultiPolygon:
     """
     polygon_list = []
     for coco_polygon in coco_segmentation:
-        point_list = list(zip(coco_polygon[0::2], coco_polygon[1::2]))
+        point_list = list(zip(coco_polygon[::2], coco_polygon[1::2]))
         shapely_polygon = Polygon(point_list)
         polygon_list.append(shapely_polygon)
-    shapely_multipolygon = MultiPolygon(polygon_list)
-
-    return shapely_multipolygon
+    return MultiPolygon(polygon_list)
 
 
 def get_bbox_from_shapely(shapely_object):
@@ -97,9 +93,7 @@ class ShapelyAnnotation:
     def multipolygon(self, multipolygon: MultiPolygon):
         self.__multipolygon = multipolygon
         # calculate areas of all polygons
-        area = 0
-        for shapely_polygon in multipolygon.geoms:
-            area += shapely_polygon.area
+        area = sum(shapely_polygon.area for shapely_polygon in multipolygon.geoms)
         # set instance area
         self.__area = area
 
@@ -228,13 +222,11 @@ class ShapelyAnnotation:
 
     def get_convex_hull_shapely_annotation(self):
         shapely_multipolygon = MultiPolygon([self.multipolygon.convex_hull])
-        shapely_annotation = ShapelyAnnotation(shapely_multipolygon)
-        return shapely_annotation
+        return ShapelyAnnotation(shapely_multipolygon)
 
     def get_simplified_shapely_annotation(self, tolerance=1):
         shapely_multipolygon = MultiPolygon([self.multipolygon.simplify(tolerance)])
-        shapely_annotation = ShapelyAnnotation(shapely_multipolygon)
-        return shapely_annotation
+        return ShapelyAnnotation(shapely_multipolygon)
 
     def get_buffered_shapely_annotation(
         self,
@@ -259,8 +251,7 @@ class ShapelyAnnotation:
             mitre_limit=mitre_limit,
             single_sided=single_sided,
         )
-        shapely_annotation = ShapelyAnnotation(MultiPolygon([buffered_polygon]))
-        return shapely_annotation
+        return ShapelyAnnotation(MultiPolygon([buffered_polygon]))
 
     def get_intersection(self, polygon: Polygon):
         """
@@ -285,7 +276,4 @@ class ShapelyAnnotation:
             intersection_multipolygon = intersection
         else:
             intersection_multipolygon = MultiPolygon([])
-        # create shapely annotation from intersection multipolygon
-        intersection_shapely_annotation = ShapelyAnnotation(intersection_multipolygon, slice_bbox)
-
-        return intersection_shapely_annotation
+        return ShapelyAnnotation(intersection_multipolygon, slice_bbox)

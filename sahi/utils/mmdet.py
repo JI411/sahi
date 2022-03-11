@@ -80,7 +80,7 @@ def download_mmdet_config(
     # get mmdet version
     from mmdet import __version__
 
-    mmdet_ver = "v" + __version__
+    mmdet_ver = f"v{__version__}"
 
     # set main config url
     base_config_url = (

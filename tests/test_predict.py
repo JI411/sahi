@@ -56,20 +56,23 @@ class TestPredict(unittest.TestCase):
 
         # compare
         self.assertEqual(len(object_prediction_list), 2)
-        num_person = 0
-        for object_prediction in object_prediction_list:
-            if object_prediction.category.name == "person":
-                num_person += 1
+        num_person = sum(
+            object_prediction.category.name == "person"
+            for object_prediction in object_prediction_list
+        )
+
         self.assertEqual(num_person, 0)
-        num_truck = 0
-        for object_prediction in object_prediction_list:
-            if object_prediction.category.name == "truck":
-                num_truck += 1
+        num_truck = sum(
+            object_prediction.category.name == "truck"
+            for object_prediction in object_prediction_list
+        )
+
         self.assertEqual(num_truck, 0)
-        num_car = 0
-        for object_prediction in object_prediction_list:
-            if object_prediction.category.name == "car":
-                num_car += 1
+        num_car = sum(
+            object_prediction.category.name == "car"
+            for object_prediction in object_prediction_list
+        )
+
         self.assertEqual(num_car, 2)
 
     def test_get_prediction_yolov5(self):
@@ -102,20 +105,23 @@ class TestPredict(unittest.TestCase):
 
         # compare
         self.assertEqual(len(object_prediction_list), 2)
-        num_person = 0
-        for object_prediction in object_prediction_list:
-            if object_prediction.category.name == "person":
-                num_person += 1
+        num_person = sum(
+            object_prediction.category.name == "person"
+            for object_prediction in object_prediction_list
+        )
+
         self.assertEqual(num_person, 0)
-        num_truck = 0
-        for object_prediction in object_prediction_list:
-            if object_prediction.category.name == "truck":
-                num_truck += 1
+        num_truck = sum(
+            object_prediction.category.name == "truck"
+            for object_prediction in object_prediction_list
+        )
+
         self.assertEqual(num_truck, 0)
-        num_car = 0
-        for object_prediction in object_prediction_list:
-            if object_prediction.category.name == "car":
-                num_car += 1
+        num_car = sum(
+            object_prediction.category.name == "car"
+            for object_prediction in object_prediction_list
+        )
+
         self.assertEqual(num_car, 2)
 
     def test_get_sliced_prediction_mmdet(self):
@@ -167,20 +173,23 @@ class TestPredict(unittest.TestCase):
 
         # compare
         self.assertEqual(len(object_prediction_list), 14)
-        num_person = 0
-        for object_prediction in object_prediction_list:
-            if object_prediction.category.name == "person":
-                num_person += 1
+        num_person = sum(
+            object_prediction.category.name == "person"
+            for object_prediction in object_prediction_list
+        )
+
         self.assertEqual(num_person, 0)
-        num_truck = 0
-        for object_prediction in object_prediction_list:
-            if object_prediction.category.name == "truck":
-                num_truck += 1
+        num_truck = sum(
+            object_prediction.category.name == "truck"
+            for object_prediction in object_prediction_list
+        )
+
         self.assertEqual(num_truck, 0)
-        num_car = 0
-        for object_prediction in object_prediction_list:
-            if object_prediction.category.name == "car":
-                num_car += 1
+        num_car = sum(
+            object_prediction.category.name == "car"
+            for object_prediction in object_prediction_list
+        )
+
         self.assertEqual(num_car, 14)
 
     def test_get_sliced_prediction_yolov5(self):
@@ -231,20 +240,23 @@ class TestPredict(unittest.TestCase):
 
         # compare
         self.assertEqual(len(object_prediction_list), 10)
-        num_person = 0
-        for object_prediction in object_prediction_list:
-            if object_prediction.category.name == "person":
-                num_person += 1
+        num_person = sum(
+            object_prediction.category.name == "person"
+            for object_prediction in object_prediction_list
+        )
+
         self.assertEqual(num_person, 0)
-        num_truck = 0
-        for object_prediction in object_prediction_list:
-            if object_prediction.category.name == "truck":
-                num_truck += 2
+        num_truck = 2 * sum(
+            object_prediction.category.name == "truck"
+            for object_prediction in object_prediction_list
+        )
+
         self.assertEqual(num_truck, 0)
-        num_car = 0
-        for object_prediction in object_prediction_list:
-            if object_prediction.category.name == "car":
-                num_car += 1
+        num_car = sum(
+            object_prediction.category.name == "car"
+            for object_prediction in object_prediction_list
+        )
+
         self.assertEqual(num_car, 10)
 
     def test_coco_json_prediction(self):

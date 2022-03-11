@@ -239,19 +239,14 @@ class MmdetDetectionModel(DetectionModel):
         """
         Returns number of categories
         """
-        if isinstance(self.model.CLASSES, str):
-            num_categories = 1
-        else:
-            num_categories = len(self.model.CLASSES)
-        return num_categories
+        return 1 if isinstance(self.model.CLASSES, str) else len(self.model.CLASSES)
 
     @property
     def has_mask(self):
         """
         Returns if model output contains segmentation mask
         """
-        has_mask = self.model.with_mask
-        return has_mask
+        return self.model.with_mask
 
     @property
     def category_names(self):
@@ -419,8 +414,7 @@ class Yolov5DetectionModel(DetectionModel):
         """
         Returns if model output contains segmentation mask
         """
-        has_mask = self.model.with_mask
-        return has_mask
+        return self.model.with_mask
 
     @property
     def category_names(self):
@@ -592,8 +586,7 @@ class Detectron2DetectionModel(DetectionModel):
         """
         Returns number of categories
         """
-        num_categories = len(self.category_mapping)
-        return num_categories
+        return len(self.category_mapping)
 
     def _create_object_prediction_list_from_original_predictions(
         self,

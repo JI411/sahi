@@ -88,7 +88,10 @@ class TestDetectron2DetectionModel(unittest.TestCase):
         desired_bbox = [831, 303, 42, 43]
         margin = 3
         for ind, point in enumerate(predicted_bbox):
-            if not (point < desired_bbox[ind] + margin and point > desired_bbox[ind] - margin):
+            if (
+                point >= desired_bbox[ind] + margin
+                or point <= desired_bbox[ind] - margin
+            ):
                 raise AssertionError(f"desired_bbox: {desired_bbox}, predicted_bbox: {predicted_bbox}")
 
         self.assertEqual(object_prediction_list[5].category.id, 2)
@@ -97,7 +100,10 @@ class TestDetectron2DetectionModel(unittest.TestCase):
         desired_bbox = [383, 277, 36, 29]
         margin = 3
         for ind, point in enumerate(predicted_bbox):
-            if not (point < desired_bbox[ind] + margin and point > desired_bbox[ind] - margin):
+            if (
+                point >= desired_bbox[ind] + margin
+                or point <= desired_bbox[ind] - margin
+            ):
                 raise AssertionError(f"desired_bbox: {desired_bbox}, predicted_bbox: {predicted_bbox}")
 
     def test_convert_original_predictions_with_mask_output(self):
@@ -130,7 +136,10 @@ class TestDetectron2DetectionModel(unittest.TestCase):
         desired_bbox = [321, 324, 59, 38]
         margin = 3
         for ind, point in enumerate(predicted_bbox):
-            if not (point < desired_bbox[ind] + margin and point > desired_bbox[ind] - margin):
+            if (
+                point >= desired_bbox[ind] + margin
+                or point <= desired_bbox[ind] - margin
+            ):
                 raise AssertionError(f"desired_bbox: {desired_bbox}, predicted_bbox: {predicted_bbox}")
 
         self.assertEqual(object_prediction_list[5].category.id, 2)
@@ -139,7 +148,10 @@ class TestDetectron2DetectionModel(unittest.TestCase):
         desired_bbox = [719, 243, 27, 30]
         margin = 3
         for ind, point in enumerate(predicted_bbox):
-            if not (point < desired_bbox[ind] + margin and point > desired_bbox[ind] - margin):
+            if (
+                point >= desired_bbox[ind] + margin
+                or point <= desired_bbox[ind] - margin
+            ):
                 raise AssertionError(f"desired_bbox: {desired_bbox}, predicted_bbox: {predicted_bbox}")
 
     def test_get_prediction_detectron2(self):
@@ -175,20 +187,23 @@ class TestDetectron2DetectionModel(unittest.TestCase):
 
         # compare
         self.assertEqual(len(object_prediction_list), 16)
-        num_person = 0
-        for object_prediction in object_prediction_list:
-            if object_prediction.category.name == "person":
-                num_person += 1
+        num_person = sum(
+            object_prediction.category.name == "person"
+            for object_prediction in object_prediction_list
+        )
+
         self.assertEqual(num_person, 0)
-        num_truck = 0
-        for object_prediction in object_prediction_list:
-            if object_prediction.category.name == "truck":
-                num_truck += 1
+        num_truck = sum(
+            object_prediction.category.name == "truck"
+            for object_prediction in object_prediction_list
+        )
+
         self.assertEqual(num_truck, 0)
-        num_car = 0
-        for object_prediction in object_prediction_list:
-            if object_prediction.category.name == "car":
-                num_car += 1
+        num_car = sum(
+            object_prediction.category.name == "car"
+            for object_prediction in object_prediction_list
+        )
+
         self.assertEqual(num_car, 16)
 
     def test_get_sliced_prediction_detectron2(self):
@@ -238,20 +253,23 @@ class TestDetectron2DetectionModel(unittest.TestCase):
 
         # compare
         self.assertEqual(len(object_prediction_list), 18)
-        num_person = 0
-        for object_prediction in object_prediction_list:
-            if object_prediction.category.name == "person":
-                num_person += 1
+        num_person = sum(
+            object_prediction.category.name == "person"
+            for object_prediction in object_prediction_list
+        )
+
         self.assertEqual(num_person, 0)
-        num_truck = 0
-        for object_prediction in object_prediction_list:
-            if object_prediction.category.name == "truck":
-                num_truck += 1
+        num_truck = sum(
+            object_prediction.category.name == "truck"
+            for object_prediction in object_prediction_list
+        )
+
         self.assertEqual(num_truck, 0)
-        num_car = 0
-        for object_prediction in object_prediction_list:
-            if object_prediction.category.name == "car":
-                num_car += 1
+        num_car = sum(
+            object_prediction.category.name == "car"
+            for object_prediction in object_prediction_list
+        )
+
         self.assertEqual(num_car, 18)
 
 

@@ -112,23 +112,19 @@ class ObjectPrediction(ObjectAnnotation):
         """
         Returns sahi.utils.coco.CocoPrediction representation of ObjectAnnotation.
         """
-        if self.mask:
-            coco_prediction = CocoPrediction.from_coco_segmentation(
+        return CocoPrediction.from_coco_segmentation(
                 segmentation=self.mask.to_coco_segmentation(),
                 category_id=self.category.id,
                 category_name=self.category.name,
                 score=self.score.value,
                 image_id=image_id,
-            )
-        else:
-            coco_prediction = CocoPrediction.from_coco_bbox(
+            ) if self.mask else CocoPrediction.from_coco_bbox(
                 bbox=self.bbox.to_coco_bbox(),
                 category_id=self.category.id,
                 category_name=self.category.name,
                 score=self.score.value,
                 image_id=image_id,
             )
-        return coco_prediction
 
     def to_fiftyone_detection(self, image_height: int, image_width: int):
         """
@@ -141,8 +137,11 @@ class ObjectPrediction(ObjectAnnotation):
 
         x1, y1, x2, y2 = self.bbox.to_voc_bbox()
         rel_box = [x1 / image_width, y1 / image_height, (x2 - x1) / image_width, (y2 - y1) / image_height]
-        fiftyone_detection = fo.Detection(label=self.category.name, bounding_box=rel_box, confidence=self.score.value)
-        return fiftyone_detection
+        return fo.Detection(
+            label=self.category.name,
+            bounding_box=rel_box,
+            confidence=self.score.value,
+        )
 
     def __repr__(self):
         return f"""ObjectPrediction<
@@ -179,22 +178,22 @@ class PredictionResult:
         )
 
     def to_coco_annotations(self):
-        coco_annotation_list = []
-        for object_prediction in self.object_prediction_list:
-            coco_annotation_list.append(object_prediction.to_coco_prediction().json)
-        return coco_annotation_list
+        return [
+            object_prediction.to_coco_prediction().json
+            for object_prediction in self.object_prediction_list
+        ]
 
     def to_coco_predictions(self, image_id: Optional[int] = None):
-        coco_prediction_list = []
-        for object_prediction in self.object_prediction_list:
-            coco_prediction_list.append(object_prediction.to_coco_prediction(image_id=image_id).json)
-        return coco_prediction_list
+        return [
+            object_prediction.to_coco_prediction(image_id=image_id).json
+            for object_prediction in self.object_prediction_list
+        ]
 
     def to_imantics_annotations(self):
-        imantics_annotation_list = []
-        for object_prediction in self.object_prediction_list:
-            imantics_annotation_list.append(object_prediction.to_imantics_annotation())
-        return imantics_annotation_list
+        return [
+            object_prediction.to_imantics_annotation()
+            for object_prediction in self.object_prediction_list
+        ]
 
     def to_fiftyone_detections(self):
         try:
@@ -202,9 +201,9 @@ class PredictionResult:
         except ImportError:
             raise ImportError('Please run "pip install -U fiftyone" to install fiftyone first for fiftyone conversion.')
 
-        fiftyone_detection_list: List[fo.Detection] = []
-        for object_prediction in self.object_prediction_list:
-            fiftyone_detection_list.append(
-                object_prediction.to_fiftyone_detection(image_height=self.image_height, image_width=self.image_width)
+        return [
+            object_prediction.to_fiftyone_detection(
+                image_height=self.image_height, image_width=self.image_width
             )
-        return fiftyone_detection_list
+            for object_prediction in self.object_prediction_list
+        ]

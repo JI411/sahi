@@ -59,9 +59,8 @@ class TestMmdetDetectionModel(unittest.TestCase):
 
         # ensure all prediction scores are greater then 0.5
         for box in boxes[0]:
-            if len(box) == 5:
-                if box[4] > 0.5:
-                    break
+            if len(box) == 5 and box[4] > 0.5:
+                break
 
         # compare
         self.assertEqual(box[:4].astype("int").tolist(), [377, 273, 410, 314])
@@ -97,9 +96,8 @@ class TestMmdetDetectionModel(unittest.TestCase):
         # find box of first car detection with conf greater than 0.5
         for box in boxes[2]:
             print(len(box))
-            if len(box) == 5:
-                if box[4] > 0.5:
-                    break
+            if len(box) == 5 and box[4] > 0.5:
+                break
 
         # compare
         self.assertEqual(box[:4].astype("int").tolist(), [320, 323, 380, 365])

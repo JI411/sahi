@@ -57,10 +57,7 @@ class ObjectPredictionList(Sequence):
         return object_prediction_list_to_numpy(self)
 
     def tolist(self):
-        if len(self.list) == 1:
-            return self.list[0]
-        else:
-            return self.list
+        return self.list[0] if len(self.list) == 1 else self.list
 
 
 def object_prediction_list_to_torch(object_prediction_list: ObjectPredictionList) -> torch.tensor:
@@ -179,8 +176,7 @@ def get_merged_score(
 def get_merged_bbox(pred1: ObjectPrediction, pred2: ObjectPrediction) -> BoundingBox:
     box1: List[int] = pred1.bbox.to_voc_bbox()
     box2: List[int] = pred2.bbox.to_voc_bbox()
-    bbox = BoundingBox(box=calculate_box_union(box1, box2))
-    return bbox
+    return BoundingBox(box=calculate_box_union(box1, box2))
 
 
 def get_merged_category(pred1: ObjectPrediction, pred2: ObjectPrediction) -> Category:

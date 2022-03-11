@@ -75,19 +75,21 @@ class NMSPostprocess(PostprocessPredictions):
     ):
         source_object_predictions: List[ObjectPrediction] = copy.deepcopy(object_predictions)
         selected_object_predictions: List[ObjectPrediction] = []
-        while len(source_object_predictions) > 0:
+        while source_object_predictions:
             # select object prediction with highest score
             source_object_predictions.sort(reverse=True, key=self.get_score_func)
             selected_object_prediction = source_object_predictions[0]
             # remove selected prediction from source list
             del source_object_predictions[0]
             # if any element from remaining source prediction list matches, remove it
-            new_source_object_predictions: List[ObjectPrediction] = []
-            for candidate_object_prediction in source_object_predictions:
-                if self._has_match(selected_object_prediction, candidate_object_prediction):
-                    pass
-                else:
-                    new_source_object_predictions.append(candidate_object_prediction)
+            new_source_object_predictions: List[ObjectPrediction] = [
+                candidate_object_prediction
+                for candidate_object_prediction in source_object_predictions
+                if not self._has_match(
+                    selected_object_prediction, candidate_object_prediction
+                )
+            ]
+
             source_object_predictions = new_source_object_predictions
             # append selected prediction to selected list
             selected_object_predictions.append(selected_object_prediction)
@@ -101,7 +103,7 @@ class UnionMergePostprocess(PostprocessPredictions):
     ):
         source_object_predictions: List[ObjectPrediction] = copy.deepcopy(object_predictions)
         selected_object_predictions: List[ObjectPrediction] = []
-        while len(source_object_predictions) > 0:
+        while source_object_predictions:
             # select object prediction with highest score
             source_object_predictions.sort(reverse=True, key=self.get_score_func)
             selected_object_prediction = source_object_predictions[0]
@@ -109,7 +111,7 @@ class UnionMergePostprocess(PostprocessPredictions):
             del source_object_predictions[0]
             # if any element from remaining source prediction list matches, remove it and merge with selected prediction
             new_source_object_predictions: List[ObjectPrediction] = []
-            for ind, candidate_object_prediction in enumerate(source_object_predictions):
+            for candidate_object_prediction in source_object_predictions:
                 if self._has_match(selected_object_prediction, candidate_object_prediction):
                     selected_object_prediction = self._merge_object_prediction_pair(
                         selected_object_prediction, candidate_object_prediction
@@ -158,8 +160,7 @@ class UnionMergePostprocess(PostprocessPredictions):
     def _get_merged_bbox(pred1: ObjectPrediction, pred2: ObjectPrediction) -> BoundingBox:
         box1: List[int] = pred1.bbox.to_voc_bbox()
         box2: List[int] = pred2.bbox.to_voc_bbox()
-        bbox = BoundingBox(box=calculate_box_union(box1, box2))
-        return bbox
+        return BoundingBox(box=calculate_box_union(box1, box2))
 
     @staticmethod
     def _get_merged_score(
