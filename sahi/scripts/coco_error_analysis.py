@@ -29,7 +29,7 @@ def _makeplot(rs, ps, outDir, class_name, iou_type):
     types = ["C75", "C50", "Loc", "Sim", "Oth", "BG", "FN"]
     for i in range(len(areaNames)):
         area_ps = ps[..., i, 0]
-        figure_title = iou_type + "-" + class_name + "-" + areaNames[i]
+        figure_title = f'{iou_type}-{class_name}-{areaNames[i]}'
         aps = []
         ps_curve = []
         for ps_ in area_ps:
@@ -42,10 +42,7 @@ def _makeplot(rs, ps, outDir, class_name, iou_type):
             else:
                 ps_curve.append(ps_)
             # calculate ap
-            if len(ps_[ps_ > -1]):
-                ap = ps_[ps_ > -1].mean()
-            else:
-                ap = np.array(0)
+            ap = ps_[ps_ > -1].mean() if len(ps_[ps_ > -1]) else np.array(0)
             aps.append(ap)
         ps_curve.insert(0, np.zeros(ps_curve[0].shape))
         fig = plt.figure()
@@ -57,8 +54,9 @@ def _makeplot(rs, ps, outDir, class_name, iou_type):
                 ps_curve[k],
                 ps_curve[k + 1],
                 color=COLOR_PALETTE[k],
-                label=str(f"[{aps[k]:.3f}]" + types[k]),
+                label=str(f"[{aps[k]:.3f}]{types[k]}"),
             )
+
         plt.xlabel("recall")
         plt.ylabel("precision")
         plt.xlim(0, 1.0)
@@ -102,16 +100,13 @@ def _makebarplot(rs, ps, outDir, class_name, iou_type):
     x = np.arange(len(areaNames))  # the areaNames locations
     width = 0.60  # the width of the bars
     rects_list = []
-    figure_title = iou_type + "-" + class_name + "-" + "ap bar plot"
+    figure_title = f'{iou_type}-{class_name}-ap bar plot'
     for k in range(len(types) - 1):
         type_ps = ps[k, ..., 0]
         # calculate ap
         aps = []
         for ps_ in type_ps.T:
-            if len(ps_[ps_ > -1]):
-                ap = ps_[ps_ > -1].mean()
-            else:
-                ap = np.array(0)
+            ap = ps_[ps_ > -1].mean() if len(ps_[ps_ > -1]) else np.array(0)
             aps.append(ap)
         # create bars
         rects_list.append(
@@ -222,15 +217,11 @@ def _make_gt_area_histogram_plot(cocoEval, outDir):
 def _analyze_individual_category(k, cocoDt, cocoGt, catId, iou_type, areas=None, max_detections=None, COCOeval=None):
     nm = cocoGt.loadCats(catId)[0]
     print(f'--------------analyzing {k + 1}-{nm["name"]}---------------')
-    ps_ = {}
     dt = copy.deepcopy(cocoDt)
     nm = cocoGt.loadCats(catId)[0]
     imgIds = cocoGt.getImgIds()
     dt_anns = dt.dataset["annotations"]
-    select_dt_anns = []
-    for ann in dt_anns:
-        if ann["category_id"] == catId:
-            select_dt_anns.append(ann)
+    select_dt_anns = [ann for ann in dt_anns if ann["category_id"] == catId]
     dt.dataset["annotations"] = select_dt_anns
     dt.createIndex()
     # compute precision but ignore superclass confusion
@@ -256,7 +247,7 @@ def _analyze_individual_category(k, cocoDt, cocoGt, catId, iou_type, areas=None,
     cocoEval.evaluate()
     cocoEval.accumulate()
     ps_supercategory = cocoEval.eval["precision"][0, :, catId, :, :]
-    ps_["ps_supercategory"] = ps_supercategory
+    ps_ = {"ps_supercategory": ps_supercategory}
     # compute precision but ignore any class confusion
     gt = copy.deepcopy(cocoGt)
     for idx, ann in enumerate(gt.dataset["annotations"]):
@@ -306,7 +297,7 @@ def _analyse_results(
         out_dir = Path(res_file).parent
         out_dir = str(out_dir / "coco_error_analysis")
 
-    directory = os.path.dirname(out_dir + "/")
+    directory = os.path.dirname(f'{out_dir}/')
     if not os.path.exists(directory):
         print(f"-------------create {out_dir}-----------------")
         os.makedirs(directory)
@@ -317,7 +308,7 @@ def _analyse_results(
     cocoDt = cocoGt.loadRes(res_file)
     imgIds = cocoGt.getImgIds()
     for res_type in res_types:
-        res_out_dir = out_dir + "/" + res_type + "/"
+        res_out_dir = f'{out_dir}/{res_type}/'
         res_directory = os.path.dirname(res_out_dir)
         if not os.path.exists(res_directory):
             print(f"-------------create {res_out_dir}-----------------")
@@ -339,7 +330,7 @@ def _analyse_results(
 
         present_cat_ids = []
         catIds = cocoGt.getCatIds()
-        for k, catId in enumerate(catIds):
+        for catId in catIds:
             image_ids = cocoGt.getImgIds(catIds=[catId])
             if len(image_ids) != 0:
                 present_cat_ids.append(catId)

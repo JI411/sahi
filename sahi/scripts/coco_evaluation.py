@@ -32,24 +32,15 @@ def _cocoeval_summarize(
         if iouThr is not None:
             t = np.where(iouThr == p.iouThrs)[0]
             s = s[t]
-        if catIdx is not None:
-            s = s[:, :, catIdx, aind, mind]
-        else:
-            s = s[:, :, :, aind, mind]
+        s = s[:, :, :, aind, mind] if catIdx is None else s[:, :, catIdx, aind, mind]
     else:
         # dimension of recall: [TxKxAxM]
         s = cocoeval.eval["recall"]
         if iouThr is not None:
             t = np.where(iouThr == p.iouThrs)[0]
             s = s[t]
-        if catIdx is not None:
-            s = s[:, catIdx, aind, mind]
-        else:
-            s = s[:, :, aind, mind]
-    if len(s[s > -1]) == 0:
-        mean_s = -1
-    else:
-        mean_s = np.mean(s[s > -1])
+        s = s[:, catIdx, aind, mind] if catIdx is not None else s[:, :, aind, mind]
+    mean_s = -1 if len(s[s > -1]) == 0 else np.mean(s[s > -1])
     if catName:
         print(iStr.format(titleStr, typeStr, nameStr, iouStr, areaRng, maxDets, mean_s, nameStrLen=nameStrLen))
     else:
@@ -107,9 +98,8 @@ def evaluate_core(
             raise KeyError(f"metric {metric} is not supported")
     if iou_thrs is None:
         iou_thrs = np.linspace(0.5, 0.95, int(np.round((0.95 - 0.5) / 0.05)) + 1, endpoint=True)
-    if metric_items is not None:
-        if not isinstance(metric_items, list):
-            metric_items = [metric_items]
+    if metric_items is not None and not isinstance(metric_items, list):
+        metric_items = [metric_items]
     if areas is not None:
         assert (
             len(areas) == 3
@@ -209,10 +199,10 @@ def evaluate_core(
             assert len(cat_ids) == precisions.shape[2]
 
             max_cat_name_len = 0
-            for idx, catId in enumerate(cat_ids):
+            for catId in cat_ids:
                 nm = cocoGt.loadCats(catId)[0]
                 cat_name_len = len(nm["name"])
-                max_cat_name_len = cat_name_len if cat_name_len > max_cat_name_len else max_cat_name_len
+                max_cat_name_len = max(cat_name_len, max_cat_name_len)
 
             results_per_category = []
             for idx, catId in enumerate(cat_ids):
@@ -299,21 +289,46 @@ def evaluate_core(
                     catName=nm["name"],
                     nameStrLen=max_cat_name_len,
                 )
-                results_per_category.append((f'{metric}_{nm["name"]}_mAP', f"{float(ap):0.3f}"))
-                results_per_category.append((f'{metric}_{nm["name"]}_mAP_s', f"{float(ap_s):0.3f}"))
-                results_per_category.append((f'{metric}_{nm["name"]}_mAP_m', f"{float(ap_m):0.3f}"))
-                results_per_category.append((f'{metric}_{nm["name"]}_mAP_l', f"{float(ap_l):0.3f}"))
-                results_per_category.append((f'{metric}_{nm["name"]}_mAP50', f"{float(ap50):0.3f}"))
-                results_per_category.append((f'{metric}_{nm["name"]}_mAP50_s', f"{float(ap50_s):0.3f}"))
-                results_per_category.append((f'{metric}_{nm["name"]}_mAP50_m', f"{float(ap50_m):0.3f}"))
-                results_per_category.append((f'{metric}_{nm["name"]}_mAP50_l', f"{float(ap50_l):0.3f}"))
+                results_per_category.extend(
+                    (
+                        (f'{metric}_{nm["name"]}_mAP', f"{float(ap):0.3f}"),
+                        (
+                            f'{metric}_{nm["name"]}_mAP_s',
+                            f"{float(ap_s):0.3f}",
+                        ),
+                        (
+                            f'{metric}_{nm["name"]}_mAP_m',
+                            f"{float(ap_m):0.3f}",
+                        ),
+                        (
+                            f'{metric}_{nm["name"]}_mAP_l',
+                            f"{float(ap_l):0.3f}",
+                        ),
+                        (
+                            f'{metric}_{nm["name"]}_mAP50',
+                            f"{float(ap50):0.3f}",
+                        ),
+                        (
+                            f'{metric}_{nm["name"]}_mAP50_s',
+                            f"{float(ap50_s):0.3f}",
+                        ),
+                        (
+                            f'{metric}_{nm["name"]}_mAP50_m',
+                            f"{float(ap50_m):0.3f}",
+                        ),
+                        (
+                            f'{metric}_{nm["name"]}_mAP50_l',
+                            f"{float(ap50_l):0.3f}",
+                        ),
+                    )
+                )
 
             num_columns = min(6, len(results_per_category) * 2)
             results_flatten = list(itertools.chain(*results_per_category))
             headers = ["category", "AP"] * (num_columns // 2)
             results_2d = itertools.zip_longest(*[results_flatten[i::num_columns] for i in range(num_columns)])
             table_data = [headers]
-            table_data += [result for result in results_2d]
+            table_data += list(results_2d)
             table = AsciiTable(table_data)
             print("\n" + table.table)
 
@@ -331,7 +346,7 @@ def evaluate_core(
             f"{ap[8]:.3f}"
         )
         if classwise:
-            eval_results["results_per_category"] = {key: value for key, value in results_per_category}
+            eval_results["results_per_category"] = dict(results_per_category)
     # set save path
     if not out_dir:
         out_dir = Path(result_path).parent

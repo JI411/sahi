@@ -72,16 +72,13 @@ def get_prediction(
     if image_size is not None:
         warnings.warn("Set 'image_size' at DetectionModel init.", DeprecationWarning)
 
-    durations_in_seconds = dict()
-
     # read image as pil
     image_as_pil = read_image_as_pil(image)
     # get prediction
     time_start = time.time()
     detection_model.perform_inference(np.ascontiguousarray(image_as_pil), image_size=image_size)
     time_end = time.time() - time_start
-    durations_in_seconds["prediction"] = time_end
-
+    durations_in_seconds = {"prediction": time_end}
     # process prediction
     time_start = time.time()
     # works only with 1 batch
@@ -173,9 +170,6 @@ def get_sliced_prediction(
     if image_size is not None:
         warnings.warn("Set 'image_size' at DetectionModel init.", DeprecationWarning)
 
-    # for profiling
-    durations_in_seconds = dict()
-
     # currently only 1 batch supported
     num_batch = 1
 
@@ -190,10 +184,9 @@ def get_sliced_prediction(
     )
     num_slices = len(slice_image_result)
     time_end = time.time() - time_start
-    durations_in_seconds["slice"] = time_end
-
+    durations_in_seconds = {"slice": time_end}
     # init match postprocess instance
-    if postprocess_type in ["NMM"]:
+    if postprocess_type in {"NMM"}:
         postprocess = NMMPostprocess(
             match_threshold=postprocess_match_threshold,
             match_metric=postprocess_match_metric,
@@ -231,8 +224,8 @@ def get_sliced_prediction(
         )
 
     # create prediction input
-    num_group = int(num_slices / num_batch)
-    if verbose == 1 or verbose == 2:
+    num_group = num_slices // num_batch
+    if verbose in {1, 2}:
         tqdm.write(f"Performing prediction on {num_slices} number of slices.")
     object_prediction_list = []
     # perform sliced prediction
@@ -255,9 +248,12 @@ def get_sliced_prediction(
             ],
         )
         # convert sliced predictions to full predictions
-        for object_prediction in prediction_result.object_prediction_list:
-            if object_prediction:  # if not empty
-                object_prediction_list.append(object_prediction.get_shifted_object_prediction())
+        object_prediction_list.extend(
+            object_prediction.get_shifted_object_prediction()
+            for object_prediction in prediction_result.object_prediction_list
+            if object_prediction
+        )
+
     # perform standard prediction
     if num_slices > 1 and perform_standard_pred:
         prediction_result = get_prediction(
@@ -403,8 +399,9 @@ def predict(
     """
     # assert prediction type
     assert (
-        no_standard_prediction and no_sliced_prediction
-    ) is not True, "'no_standard_prediction' and 'no_sliced_prediction' cannot be True at the same time."
+        not no_standard_prediction or not no_sliced_prediction
+    ), "'no_standard_prediction' and 'no_sliced_prediction' cannot be True at the same time."
+
 
     # auto postprocess type
     if not force_postprocess_type and model_confidence_threshold < LOW_MODEL_CONFIDENCE and postprocess_type != "NMS":
@@ -413,9 +410,6 @@ def predict(
         )
         postprocess_type = "NMS"
         postprocess_match_metric = "IOU"
-
-    # for profiling
-    durations_in_seconds = dict()
 
     # list image files in directory
     if dataset_json_path:
@@ -455,11 +449,7 @@ def predict(
     )
     detection_model.load_model()
     time_end = time.time() - time_start
-    durations_in_seconds["model_load"] = time_end
-
-    # iterate over source images
-    durations_in_seconds["prediction"] = 0
-    durations_in_seconds["slice"] = 0
+    durations_in_seconds = {"model_load": time_end, "prediction": 0, "slice": 0}
     for ind, image_path in enumerate(tqdm(image_path_list, "Performing inference on images")):
         # get filename
         if os.path.isdir(source):  # preserve source folder structure in export
@@ -703,11 +693,9 @@ def predict_fiftyone(
 
     # assert prediction type
     assert (
-        no_standard_prediction and no_sliced_prediction
-    ) is not True, "'no_standard_pred' and 'no_sliced_prediction' cannot be True at the same time."
+        not no_standard_prediction or not no_sliced_prediction
+    ), "'no_standard_pred' and 'no_sliced_prediction' cannot be True at the same time."
 
-    # for profiling
-    durations_in_seconds = dict()
 
     dataset = create_fiftyone_dataset_from_coco_file(image_dir, dataset_json_path)
 
@@ -727,11 +715,7 @@ def predict_fiftyone(
     )
     detection_model.load_model()
     time_end = time.time() - time_start
-    durations_in_seconds["model_load"] = time_end
-
-    # iterate over source images
-    durations_in_seconds["prediction"] = 0
-    durations_in_seconds["slice"] = 0
+    durations_in_seconds = {"model_load": time_end, "prediction": 0, "slice": 0}
     # Add predictions to samples
     with fo.ProgressBar() as pb:
         for sample in pb(dataset):

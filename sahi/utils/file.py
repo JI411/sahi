@@ -102,7 +102,10 @@ def list_files(
     number_of_files = len(filepath_list)
     folder_name = Path(directory).name
 
-    verboseprint(f"There are {str(number_of_files)} listed files in folder: {folder_name}/")
+    verboseprint(
+        f"There are {number_of_files} listed files in folder: {folder_name}/"
+    )
+
 
     return filepath_list
 
@@ -147,7 +150,10 @@ def list_files_recursively(directory: str, contains: list = [".json"], verbose: 
     number_of_files = len(relative_filepath_list)
     folder_name = directory.split(os.sep)[-1]
 
-    verboseprint("There are {} listed files in folder {}.".format(number_of_files, folder_name))
+    verboseprint(
+        f"There are {number_of_files} listed files in folder {folder_name}."
+    )
+
 
     return relative_filepath_list, abs_filepath_list
 
@@ -204,8 +210,7 @@ def import_class(model_name):
         class_: class with given path
     """
     module = __import__("sahi.model", fromlist=[model_name])
-    class_ = getattr(module, model_name)
-    return class_
+    return getattr(module, model_name)
 
 
 def increment_path(path, exist_ok=True, sep=""):
@@ -213,12 +218,11 @@ def increment_path(path, exist_ok=True, sep=""):
     path = Path(path)  # os-agnostic
     if (path.exists() and exist_ok) or (not path.exists()):
         return str(path)
-    else:
-        dirs = glob.glob(f"{path}{sep}*")  # similar paths
-        matches = [re.search(rf"%s{sep}(\d+)" % path.stem, d) for d in dirs]
-        i = [int(m.groups()[0]) for m in matches if m]  # indices
-        n = max(i) + 1 if i else 2  # increment number
-        return f"{path}{sep}{n}"  # update path
+    dirs = glob.glob(f"{path}{sep}*")  # similar paths
+    matches = [re.search(rf"%s{sep}(\d+)" % path.stem, d) for d in dirs]
+    i = [int(m.groups()[0]) for m in matches if m]  # indices
+    n = max(i) + 1 if i else 2  # increment number
+    return f"{path}{sep}{n}"  # update path
 
 
 def download_from_url(from_url: str, to_path: str):

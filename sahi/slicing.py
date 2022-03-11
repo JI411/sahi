@@ -178,10 +178,7 @@ class SliceImageResult:
         Returns:
             images: a list of np.array
         """
-        images = []
-        for sliced_image in self._sliced_image_list:
-            images.append(sliced_image.image)
-        return images
+        return [sliced_image.image for sliced_image in self._sliced_image_list]
 
     @property
     def coco_images(self) -> List[CocoImage]:
@@ -190,10 +187,7 @@ class SliceImageResult:
         Returns:
             coco_images: a list of CocoImage
         """
-        coco_images: List = []
-        for sliced_image in self._sliced_image_list:
-            coco_images.append(sliced_image.coco_image)
-        return coco_images
+        return [sliced_image.coco_image for sliced_image in self._sliced_image_list]
 
     @property
     def starting_pixels(self) -> List[int]:
@@ -202,10 +196,9 @@ class SliceImageResult:
         Returns:
             starting_pixels: a list of starting pixel coords [x,y]
         """
-        starting_pixels = []
-        for sliced_image in self._sliced_image_list:
-            starting_pixels.append(sliced_image.starting_pixel)
-        return starting_pixels
+        return [
+            sliced_image.starting_pixel for sliced_image in self._sliced_image_list
+        ]
 
     @property
     def filenames(self) -> List[int]:
@@ -214,10 +207,10 @@ class SliceImageResult:
         Returns:
             filenames: a list of filenames as str
         """
-        filenames = []
-        for sliced_image in self._sliced_image_list:
-            filenames.append(sliced_image.coco_image.file_name)
-        return filenames
+        return [
+            sliced_image.coco_image.file_name
+            for sliced_image in self._sliced_image_list
+        ]
 
     def __len__(self):
         return len(self._sliced_image_list)
@@ -280,7 +273,7 @@ def slice_image(
         slice_file_path = str(Path(output_dir) / slice_file_name)
         # export sliced image
         image_pil.save(slice_file_path)
-        verboselog("sliced image path: " + slice_file_path)
+        verboselog(f"sliced image path: {slice_file_path}")
 
     # create outdir if not present
     if output_dir is not None:

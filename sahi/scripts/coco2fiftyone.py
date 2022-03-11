@@ -35,7 +35,7 @@ def main(
             result_name = result_name_temp
             name_increment = 2
             while result_name in result_name_list:
-                result_name = result_name_temp + "_" + str(name_increment)
+                result_name = f'{result_name_temp}_{str(name_increment)}'
                 name_increment += 1
             result_name_list.append(result_name)
 

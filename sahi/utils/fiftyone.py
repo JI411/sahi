@@ -67,8 +67,7 @@ class COCODetectionDatasetImporter(BaseCOCODetectionDatasetImporter):
 
 def create_fiftyone_dataset_from_coco_file(coco_image_dir: str, coco_json_path: str):
     coco_importer = COCODetectionDatasetImporter(data_path=coco_image_dir, labels_path=coco_json_path, include_id=True)
-    dataset = fo.Dataset.from_importer(coco_importer, label_field="gt")
-    return dataset
+    return fo.Dataset.from_importer(coco_importer, label_field="gt")
 
 
 def launch_fiftyone_app(coco_image_dir: str, coco_json_path: str):

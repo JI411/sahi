@@ -33,7 +33,7 @@ class CocoCategory:
     def __init__(self, id=None, name=None, supercategory=None):
         self.id = int(id)
         self.name = name
-        self.supercategory = supercategory if supercategory else name
+        self.supercategory = supercategory or name
 
     @classmethod
     def from_coco_category(cls, category):
@@ -578,10 +578,10 @@ class CocoImage:
             width : int
                 Image width in pixels
         """
-        self.id = int(id) if id else id
+        self.id = id or id
         self.file_name = file_name
-        self.height = int(height)
-        self.width = int(width)
+        self.height = height
+        self.width = width
         self.annotations = []  # list of CocoAnnotation that belong to this image
 
     def add_annotation(self, annotation):
@@ -892,7 +892,10 @@ class Coco:
         for coco_image in copy.deepcopy(self.images):
             updated_coco_image = CocoImage.from_coco_image_dict(coco_image.json)
             # update filename to abspath
-            file_name_is_abspath = True if os.path.abspath(coco_image.file_name) == coco_image.file_name else False
+            file_name_is_abspath = (
+                os.path.abspath(coco_image.file_name) == coco_image.file_name
+            )
+
             if update_image_filenames and not file_name_is_abspath:
                 updated_coco_image.file_name = str(Path(os.path.abspath(self.image_dir)) / coco_image.file_name)
             # update annotations
@@ -925,16 +928,15 @@ class Coco:
         """
         assert self.image_dir and coco.image_dir, "image_dir should be provided for merging."
 
-        if verbose:
-            if not desired_name2id:
-                print("'desired_name2id' is not specified, combining all categories.")
+        if verbose and not desired_name2id:
+            print("'desired_name2id' is not specified, combining all categories.")
 
         # create desired_name2id by combining all categories, if desired_name2id is not specified
         coco1 = self
         coco2 = coco
-        category_ind = 0
         if desired_name2id is None:
             desired_name2id = {}
+            category_ind = 0
             for coco in [coco1, coco2]:
                 temp_categories = copy.deepcopy(coco.json_categories)
                 for temp_category in temp_categories:
@@ -997,9 +999,11 @@ class Coco:
             clip_bboxes_to_img_dims=clip_bboxes_to_img_dims,
         )
 
-        assert (
-            type(coco_dict_or_path) == str or type(coco_dict_or_path) == dict
-        ), "coco_dict_or_path should be dict or str"
+        assert type(coco_dict_or_path) in [
+            str,
+            dict,
+        ], "coco_dict_or_path should be dict or str"
+
 
         # load coco dict if path is given
         if type(coco_dict_or_path) == str:
@@ -1049,17 +1053,11 @@ class Coco:
 
     @property
     def json_categories(self):
-        categories = []
-        for category in self.categories:
-            categories.append(category.json)
-        return categories
+        return [category.json for category in self.categories]
 
     @property
     def category_mapping(self):
-        category_mapping = {}
-        for category in self.categories:
-            category_mapping[category.id] = category.name
-        return category_mapping
+        return {category.id: category.name for category in self.categories}
 
     @property
     def json(self):
@@ -1177,13 +1175,13 @@ class Coco:
 
         # form train val coco objects
         train_coco = Coco(
-            name=self.name if self.name else "split" + "_train",
-            image_dir=self.image_dir,
+            name=self.name or "split" + "_train", image_dir=self.image_dir
         )
+
         train_coco.images = train_images
         train_coco.categories = self.categories
 
-        val_coco = Coco(name=self.name if self.name else "split" + "_val", image_dir=self.image_dir)
+        val_coco = Coco(name=self.name or "split" + "_val", image_dir=self.image_dir)
         val_coco.images = val_images
         val_coco.categories = self.categories
 
@@ -1219,7 +1217,7 @@ class Coco:
             )
 
         # set split_mode
-        if 0 < train_split_rate and train_split_rate < 1:
+        if 0 < train_split_rate < 1:
             split_mode = "TRAINVAL"
         elif train_split_rate == 0:
             split_mode = "VAL"
@@ -1271,11 +1269,12 @@ class Coco:
 
         # create yolov5 data yaml
         data = {
-            "train": str(train_dir),
-            "val": str(val_dir),
+            "train": train_dir,
+            "val": val_dir,
             "nc": len(self.category_mapping),
             "names": list(self.category_mapping.values()),
         }
+
         yaml_path = str(Path(output_dir) / "data.yml")
         with open(yaml_path, "w") as outfile:
             yaml.dump(data, outfile, default_flow_style=None)
@@ -1516,59 +1515,64 @@ def export_single_yolov5_image_and_corresponding_txt(
         ignore_negative_samples: bool
             If True ignores images without annotations in all operations.
     """
-    if not ignore_negative_samples or len(coco_image.annotations) > 0:
-        # skip images without suffix
-        # https://github.com/obss/sahi/issues/114
-        if Path(coco_image.file_name).suffix == "":
-            print(f"image file has no suffix, skipping it: '{coco_image.file_name}'")
-            return
-        elif Path(coco_image.file_name).suffix in [".txt"]:  # TODO: extend this list
-            print(f"image file has incorrect suffix, skipping it: '{coco_image.file_name}'")
-            return
-        # set coco and yolo image paths
-        if Path(coco_image.file_name).is_file():
-            coco_image_path = os.path.abspath(coco_image.file_name)
-        else:
-            assert coco_image_dir is not None, "You have to specify image_dir " "of Coco object for yolov5 conversion."
-            coco_image_path = os.path.abspath(str(Path(coco_image_dir) / coco_image.file_name))
-        yolo_image_path_temp = str(Path(output_dir) / Path(coco_image.file_name).name)
-        # increment target file name if already present
-        yolo_image_path = copy.deepcopy(yolo_image_path_temp)
-        name_increment = 2
-        while Path(yolo_image_path).is_file():
-            parent_dir = Path(yolo_image_path_temp).parent
-            filename = Path(yolo_image_path_temp).stem
-            filesuffix = Path(yolo_image_path_temp).suffix
-            filename = filename + "_" + str(name_increment)
-            yolo_image_path = str(parent_dir / (filename + filesuffix))
-            name_increment += 1
-        # create a symbolic link pointing to coco_image_path named yolo_image_path
-        os.symlink(coco_image_path, yolo_image_path)
-        # calculate annotation normalization ratios
-        width = coco_image.width
-        height = coco_image.height
-        dw = 1.0 / (width)
-        dh = 1.0 / (height)
-        # set annotation filepath
-        image_file_suffix = Path(yolo_image_path).suffix
-        yolo_annotation_path = yolo_image_path.replace(image_file_suffix, ".txt")
-        # create annotation file
-        annotations = coco_image.annotations
-        with open(yolo_annotation_path, "w") as outfile:
-            for annotation in annotations:
-                # convert coco bbox to yolo bbox
-                x_center = annotation.bbox[0] + annotation.bbox[2] / 2.0
-                y_center = annotation.bbox[1] + annotation.bbox[3] / 2.0
-                bbox_width = annotation.bbox[2]
-                bbox_height = annotation.bbox[3]
-                x_center = x_center * dw
-                y_center = y_center * dh
-                bbox_width = bbox_width * dw
-                bbox_height = bbox_height * dh
-                category_id = annotation.category_id
-                yolo_bbox = (x_center, y_center, bbox_width, bbox_height)
+    if ignore_negative_samples and len(coco_image.annotations) <= 0:
+        return
+    # skip images without suffix
+    # https://github.com/obss/sahi/issues/114
+    if Path(coco_image.file_name).suffix == "":
+        print(f"image file has no suffix, skipping it: '{coco_image.file_name}'")
+        return
+    elif Path(coco_image.file_name).suffix in [".txt"]:  # TODO: extend this list
+        print(f"image file has incorrect suffix, skipping it: '{coco_image.file_name}'")
+        return
+    # set coco and yolo image paths
+    if Path(coco_image.file_name).is_file():
+        coco_image_path = os.path.abspath(coco_image.file_name)
+    else:
+        assert coco_image_dir is not None, "You have to specify image_dir " "of Coco object for yolov5 conversion."
+        coco_image_path = os.path.abspath(str(Path(coco_image_dir) / coco_image.file_name))
+    yolo_image_path_temp = str(Path(output_dir) / Path(coco_image.file_name).name)
+    # increment target file name if already present
+    yolo_image_path = copy.deepcopy(yolo_image_path_temp)
+    name_increment = 2
+    while Path(yolo_image_path).is_file():
+        parent_dir = Path(yolo_image_path_temp).parent
+        filename = Path(yolo_image_path_temp).stem
+        filesuffix = Path(yolo_image_path_temp).suffix
+        filename = f'{filename}_{str(name_increment)}'
+        yolo_image_path = str(parent_dir / (filename + filesuffix))
+        name_increment += 1
+    # create a symbolic link pointing to coco_image_path named yolo_image_path
+    os.symlink(coco_image_path, yolo_image_path)
+    # calculate annotation normalization ratios
+    width = coco_image.width
+    height = coco_image.height
+    dw = 1.0 / (width)
+    dh = 1.0 / (height)
+    # set annotation filepath
+    image_file_suffix = Path(yolo_image_path).suffix
+    yolo_annotation_path = yolo_image_path.replace(image_file_suffix, ".txt")
+    # create annotation file
+    annotations = coco_image.annotations
+    with open(yolo_annotation_path, "w") as outfile:
+        for annotation in annotations:
+            # convert coco bbox to yolo bbox
+            x_center = annotation.bbox[0] + annotation.bbox[2] / 2.0
+            y_center = annotation.bbox[1] + annotation.bbox[3] / 2.0
+            bbox_width = annotation.bbox[2]
+            bbox_height = annotation.bbox[3]
+            x_center = x_center * dw
+            y_center = y_center * dh
+            bbox_width = bbox_width * dw
+            bbox_height = bbox_height * dh
+            category_id = annotation.category_id
+            yolo_bbox = (x_center, y_center, bbox_width, bbox_height)
                 # save yolo annotation
-                outfile.write(str(category_id) + " " + " ".join([str(value) for value in yolo_bbox]) + "\n")
+            outfile.write(
+                f'{str(category_id)} '
+                + " ".join([str(value) for value in yolo_bbox])
+                + "\n"
+            )
 
 
 def update_categories(desired_name2id: dict, coco_dict: dict) -> dict:
@@ -1599,11 +1603,9 @@ def update_categories(desired_name2id: dict, coco_dict: dict) -> dict:
     for category in coco_source["categories"]:
         current_category_id = category["id"]
         current_category_name = category["name"]
-        if current_category_name in desired_name2id.keys():
-            currentid2desiredid_mapping[current_category_id] = desired_name2id[current_category_name]
-        else:
-            # ignore categories that are not included in desired_name2id
-            currentid2desiredid_mapping[current_category_id] = -1
+        currentid2desiredid_mapping[current_category_id] = desired_name2id.get(
+            current_category_name, -1
+        )
 
     # update annotations
     for annotation in coco_source["annotations"]:
@@ -1618,7 +1620,7 @@ def update_categories(desired_name2id: dict, coco_dict: dict) -> dict:
 
     # create desired categories
     categories = []
-    for name in desired_name2id.keys():
+    for name in desired_name2id:
         category = {}
         category["name"] = category["supercategory"] = name
         category["id"] = desired_name2id[name]
@@ -1721,9 +1723,8 @@ def merge_from_list(coco_dict_list, desired_name2id=None, verbose=1):
         merged_coco_dict: dict
             Merged COCO dict.
     """
-    if verbose:
-        if not desired_name2id:
-            print("'desired_name2id' is not specified, combining all categories.")
+    if verbose and not desired_name2id:
+        print("'desired_name2id' is not specified, combining all categories.")
 
     # create desired_name2id by combinin all categories, if desired_name2id is not specified
     if desired_name2id is None:
@@ -1732,12 +1733,11 @@ def merge_from_list(coco_dict_list, desired_name2id=None, verbose=1):
         for coco_dict in coco_dict_list:
             temp_categories = copy.deepcopy(coco_dict["categories"])
             for temp_category in temp_categories:
-                if temp_category["name"] not in desired_name2id:
-                    desired_name2id[temp_category["name"]] = ind
-                    ind += 1
-                else:
+                if temp_category["name"] in desired_name2id:
                     continue
 
+                desired_name2id[temp_category["name"]] = ind
+                ind += 1
     for ind, coco_dict in enumerate(coco_dict_list):
         if ind == 0:
             merged_coco_dict = copy.deepcopy(coco_dict)
@@ -1846,45 +1846,41 @@ def create_coco_dict(images, categories, ignore_negative_samples=False):
         coco_annotations = coco_image.annotations
         # get num annotations
         num_annotations = len(coco_annotations)
-        # if ignore_negative_samples is True and no annotations, skip image
         if ignore_negative_samples and num_annotations == 0:
             continue
-        else:
-            # create coco image object
-            out_image = {
-                "height": coco_image.height,
-                "width": coco_image.width,
-                "id": image_id,
-                "file_name": coco_image.file_name,
+        # create coco image object
+        out_image = {
+            "height": coco_image.height,
+            "width": coco_image.width,
+            "id": image_id,
+            "file_name": coco_image.file_name,
+        }
+        out_images.append(out_image)
+
+        # do the same for image annotations
+        for coco_annotation in coco_annotations:
+            # create coco annotation object
+            out_annotation = {
+                "iscrowd": 0,
+                "image_id": image_id,
+                "bbox": coco_annotation.bbox,
+                "segmentation": coco_annotation.segmentation,
+                "category_id": coco_annotation.category_id,
+                "id": annotation_id,
+                "area": coco_annotation.area,
             }
-            out_images.append(out_image)
+            out_annotations.append(out_annotation)
+            annotation_id = annotation_id + 1
 
-            # do the same for image annotations
-            for coco_annotation in coco_annotations:
-                # create coco annotation object
-                out_annotation = {
-                    "iscrowd": 0,
-                    "image_id": image_id,
-                    "bbox": coco_annotation.bbox,
-                    "segmentation": coco_annotation.segmentation,
-                    "category_id": coco_annotation.category_id,
-                    "id": annotation_id,
-                    "area": coco_annotation.area,
-                }
-                out_annotations.append(out_annotation)
-                annotation_id = annotation_id + 1
+        # increment annotation id
+        image_id = image_id + 1
 
-            # increment annotation id
-            image_id = image_id + 1
-
-    # form coco dict
-    coco_dict = {
+    # return coco dict
+    return {
         "images": out_images,
         "annotations": out_annotations,
         "categories": out_categories,
     }
-    # return coco dict
-    return coco_dict
 
 
 def add_bbox_and_area_to_coco(
@@ -1911,12 +1907,13 @@ def add_bbox_and_area_to_coco(
             [coco_polygons.extend(coco_polygon) for coco_polygon in annotation["segmentation"]]
             minx, miny, maxx, maxy = list(
                 [
-                    min(coco_polygons[0::2]),
+                    min(coco_polygons[::2]),
                     min(coco_polygons[1::2]),
-                    max(coco_polygons[0::2]),
+                    max(coco_polygons[::2]),
                     max(coco_polygons[1::2]),
                 ]
             )
+
             x, y, width, height = (
                 round(minx),
                 round(miny),
@@ -1949,9 +1946,7 @@ class DatasetClassCounts:
     def __add__(self, o):
         total = self.total_images + o.total_images
         exclusive_keys = set(o.counts.keys()) - set(self.counts.keys())
-        counts = {}
-        for k, v in self.counts.items():
-            counts[k] = v + o.counts.get(k, 0)
+        counts = {k: v + o.counts.get(k, 0) for k, v in self.counts.items()}
         for k in exclusive_keys:
             counts[k] = o.counts[k]
         return DatasetClassCounts(counts, total)
@@ -2034,17 +2029,11 @@ class CocoVid:
 
     @property
     def json_categories(self):
-        categories = []
-        for category in self.categories:
-            categories.append(category.json)
-        return categories
+        return [category.json for category in self.categories]
 
     @property
     def category_mapping(self):
-        category_mapping = {}
-        for category in self.categories:
-            category_mapping[category.id] = category.name
-        return category_mapping
+        return {category.id: category.name for category in self.categories}
 
     def add_video(self, video):
         """
@@ -2146,15 +2135,16 @@ def remove_invalid_coco_results(result_list_or_path: Union[List, str], dataset_d
         if bbox[0] < 0 or bbox[1] < 0 or bbox[2] < 0 or bbox[3] < 0:
             print(f"ignoring invalid prediction with bbox: {bbox}")
             continue
-        if dataset_dict_or_path is not None:
-            if (
+        if dataset_dict_or_path is not None and (
+            (
                 bbox[1] > image_id_to_height[coco_result["image_id"]]
                 or bbox[3] > image_id_to_height[coco_result["image_id"]]
                 or bbox[0] > image_id_to_width[coco_result["image_id"]]
                 or bbox[2] > image_id_to_width[coco_result["image_id"]]
-            ):
-                print(f"ignoring invalid prediction with bbox: {bbox}")
-                continue
+            )
+        ):
+            print(f"ignoring invalid prediction with bbox: {bbox}")
+            continue
         fixed_result_list.append(coco_result)
     return fixed_result_list
 
@@ -2190,7 +2180,7 @@ def export_coco_as_yolov5(
     # set split_mode
     if train_coco and not val_coco:
         split_mode = True
-    elif train_coco and val_coco:
+    elif train_coco:
         split_mode = False
     else:
         raise ValueError("'train_coco' have to be provided")
@@ -2290,12 +2280,10 @@ def export_coco_as_yolov5_via_yml(yml_path: str, output_dir: str, train_split_ra
     else:
         val_coco = None
 
-    yaml_path = export_coco_as_yolov5(
+    return export_coco_as_yolov5(
         output_dir=output_dir,
         train_coco=train_coco,
         val_coco=val_coco,
         train_split_rate=train_split_rate,
         numpy_seed=numpy_seed,
     )
-
-    return yaml_path

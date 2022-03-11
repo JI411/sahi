@@ -21,7 +21,7 @@ class MotTextFile(PredictionsTextFile):
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
 
-        self.out_file_name = os.path.join(save_dir, save_name + ".txt")
+        self.out_file_name = os.path.join(save_dir, f'{save_name}.txt')
 
         self.frame_number = 0
 
@@ -32,35 +32,32 @@ class MotTextFile(PredictionsTextFile):
         Write tracked object information in the output file (for this frame), in the format
         frame_number, id, bb_left, bb_top, bb_width, bb_height, 1, -1, -1, -1
         """
-        text_file = open(self.out_file_name, "a+")
+        with open(self.out_file_name, "a+") as text_file:
+            for obj in predictions:
+                frame_str = str(int(frame_number))
+                id_str = str(int(obj.id))
+                bb_left_str = str((obj.estimate[0, 0]))
+                bb_top_str = str((obj.estimate[0, 1]))  # [0,1]
+                bb_width_str = str((obj.estimate[1, 0] - obj.estimate[0, 0]))
+                bb_height_str = str((obj.estimate[1, 1] - obj.estimate[0, 1]))
+                row_text_out = (
+                    frame_str
+                    + ","
+                    + id_str
+                    + ","
+                    + bb_left_str
+                    + ","
+                    + bb_top_str
+                    + ","
+                    + bb_width_str
+                    + ","
+                    + bb_height_str
+                    + ",1,-1,-1,-1"
+                )
+                text_file.write(row_text_out)
+                text_file.write("\n")
 
-        for obj in predictions:
-            frame_str = str(int(frame_number))
-            id_str = str(int(obj.id))
-            bb_left_str = str((obj.estimate[0, 0]))
-            bb_top_str = str((obj.estimate[0, 1]))  # [0,1]
-            bb_width_str = str((obj.estimate[1, 0] - obj.estimate[0, 0]))
-            bb_height_str = str((obj.estimate[1, 1] - obj.estimate[0, 1]))
-            row_text_out = (
-                frame_str
-                + ","
-                + id_str
-                + ","
-                + bb_left_str
-                + ","
-                + bb_top_str
-                + ","
-                + bb_width_str
-                + ","
-                + bb_height_str
-                + ",1,-1,-1,-1"
-            )
-            text_file.write(row_text_out)
-            text_file.write("\n")
-
-        self.frame_number += 1
-
-        text_file.close()
+            self.frame_number += 1
 
 
 def euclidean_distance(detection, tracked_object):
@@ -227,7 +224,7 @@ class MotVideo:
         with open(str(filepath), "w") as file:
             file.write("[Sequence]\n")
             file.write(f"name={self.name}\n")
-            file.write(f"imDir=img1\n")
+            file.write("imDir=img1\\n")
             file.write(f"frameRate={self.frame_rate}\n")
             file.write(f"seqLength={seq_length}\n")
             file.write(f"imWidth={self.image_width}\n")
@@ -241,12 +238,10 @@ class MotVideo:
                               pointing to source image files.
         """
 
-        i = 1
-
         img1 = Path(os.path.abspath(export_dir)) / "img1/"
         img1.mkdir(parents=True, exist_ok=True)
 
-        for mot_frame in self.frame_list:
+        for i, mot_frame in enumerate(self.frame_list, start=1):
             if not isinstance(mot_frame.file_name, str):
                 raise TypeError(f"mot_frame.file_name expected to be string but got: {type(mot_frame.file_name)}")
 
@@ -276,7 +271,6 @@ class MotVideo:
 
             mot_image_path = str(Path(export_dir) / Path("img1") / Path(frame_link_name))
             os.symlink(source_image_path, mot_image_path)
-            i += 1
 
     def add_frame(self, frame: MotFrame):
         assert type(frame) == MotFrame, "'frame' should be a MotFrame object."
@@ -299,20 +293,23 @@ class MotVideo:
                 It is always False for type='det'.
             exist_ok (bool): If True overwrites given directory.
         """
-        assert type in ["gt", "det"], TypeError(f"'type' can be one of ['gt', 'det'], you provided: {type}")
+        assert type in {"gt", "det"}, TypeError(
+            f"'type' can be one of ['gt', 'det'], you provided: {type}"
+        )
+
 
         export_dir: str = str(increment_path(Path(export_dir), exist_ok=exist_ok))
 
-        if type == "gt":
-            gt_dir = os.path.join(export_dir, self.name if self.name else "", "gt")
-            mot_text_file: MotTextFile = MotTextFile(save_dir=gt_dir, save_name="gt")
-            if not use_tracker:
-                use_tracker = True
-        elif type == "det":
-            det_dir = os.path.join(export_dir, self.name if self.name else "", "det")
+        if type == "det":
+            det_dir = os.path.join(export_dir, self.name or "", "det")
             mot_text_file: MotTextFile = MotTextFile(save_dir=det_dir, save_name="det")
             use_tracker = False
 
+        elif type == "gt":
+            gt_dir = os.path.join(export_dir, self.name or "", "gt")
+            mot_text_file: MotTextFile = MotTextFile(save_dir=gt_dir, save_name="gt")
+            if not use_tracker:
+                use_tracker = True
         tracker = Tracker(
             distance_function=self.tracker_kwargs.get("distance_function", euclidean_distance),
             distance_threshold=self.tracker_kwargs.get("distance_threshold", 50),
@@ -333,7 +330,7 @@ class MotVideo:
             mot_text_file.update(predictions=tracked_objects)
 
         if type == "gt":
-            info_dir = os.path.join(export_dir, self.name if self.name else "")
+            info_dir = os.path.join(export_dir, self.name or "")
             self._create_info_file(seq_length=mot_text_file.frame_number, export_dir=info_dir)
             # create symlinks if mot frames contain file_name
             if self.frame_list[0].file_name:

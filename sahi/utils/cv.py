@@ -40,7 +40,7 @@ class Colors:
             "FF95C8",
             "FF37C7",
         )
-        self.palette = [self.hex2rgb("#" + c) for c in hex]
+        self.palette = [self.hex2rgb(f"#{c}") for c in hex]
         self.n = len(self.palette)
 
     def __call__(self, i, bgr=False):
@@ -86,8 +86,9 @@ def crop_object_predictions(
         )
         save_path = os.path.join(
             output_dir,
-            file_name + "_box" + str(ind) + "_class" + str(category_id) + "." + export_format,
+            f'{file_name}_box{str(ind)}_class{str(category_id)}.{export_format}',
         )
+
         cv2.imwrite(save_path, cv2.cvtColor(cropped_img, cv2.COLOR_RGB2BGR))
 
 
@@ -99,8 +100,8 @@ def convert_image_to(read_path, extension: str = "jpg", grayscale: bool = False)
     pre, ext = os.path.splitext(read_path)
     if grayscale:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        pre = pre + "_gray"
-    save_path = pre + "." + extension
+        pre = f'{pre}_gray'
+    save_path = f'{pre}.{extension}'
     cv2.imwrite(save_path, image)
 
 
@@ -206,8 +207,7 @@ def apply_color_mask(image: np.ndarray, color: tuple):
     b = np.zeros_like(image).astype(np.uint8)
 
     (r[image == 1], g[image == 1], b[image == 1]) = color
-    colored_mask = np.stack([r, g, b], axis=2)
-    return colored_mask
+    return np.stack([r, g, b], axis=2)
 
 
 def visualize_prediction(
@@ -230,10 +230,7 @@ def visualize_prediction(
     # deepcopy image so that original is not altered
     image = copy.deepcopy(image)
     # select predefined classwise color palette if not specified
-    if color is None:
-        colors = Colors()
-    else:
-        colors = None
+    colors = Colors() if color is None else None
     # set rect_th for boxes
     rect_th = rect_th or max(round(sum(image.shape) / 2 * 0.003), 2)
     # set text_th for category names
@@ -269,7 +266,7 @@ def visualize_prediction(
         # arange bounding box text location
         label = f"{class_}"
         w, h = cv2.getTextSize(label, 0, fontScale=text_size, thickness=text_th)[0]  # label width, height
-        outside = p1[1] - h - 3 >= 0  # label fits outside box
+        outside = p1[1] - h >= 3
         p2 = p1[0] + w, p1[1] - h - 3 if outside else p1[1] + h + 3
         # add bounding box text
         cv2.rectangle(image, p1, p2, color, -1, cv2.LINE_AA)  # filled
@@ -286,7 +283,7 @@ def visualize_prediction(
         # create output folder if not present
         Path(output_dir).mkdir(parents=True, exist_ok=True)
         # save inference result
-        save_path = os.path.join(output_dir, file_name + ".png")
+        save_path = os.path.join(output_dir, f'{file_name}.png')
         cv2.imwrite(save_path, cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
     elapsed_time = time.time() - elapsed_time
     return {"image": image, "elapsed_time": elapsed_time}
@@ -320,10 +317,7 @@ def visualize_object_predictions(
     # deepcopy image so that original is not altered
     image = copy.deepcopy(image)
     # select predefined classwise color palette if not specified
-    if color is None:
-        colors = Colors()
-    else:
-        colors = None
+    colors = Colors() if color is None else None
     # set rect_th for boxes
     rect_th = rect_th or max(round(sum(image.shape) / 2 * 0.001), 1)
     # set text_th for category names
@@ -362,7 +356,7 @@ def visualize_object_predictions(
         # arange bounding box text location
         label = f"{category_name} {score:.2f}"
         w, h = cv2.getTextSize(label, 0, fontScale=text_size, thickness=text_th)[0]  # label width, height
-        outside = p1[1] - h - 3 >= 0  # label fits outside box
+        outside = p1[1] - h >= 3
         p2 = p1[0] + w, p1[1] - h - 3 if outside else p1[1] + h + 3
         # add bounding box text
         cv2.rectangle(image, p1, p2, color, -1, cv2.LINE_AA)  # filled
@@ -379,7 +373,7 @@ def visualize_object_predictions(
         # create output folder if not present
         Path(output_dir).mkdir(parents=True, exist_ok=True)
         # save inference result
-        save_path = os.path.join(output_dir, file_name + "." + export_format)
+        save_path = os.path.join(output_dir, f'{file_name}.{export_format}')
         cv2.imwrite(save_path, cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
     elapsed_time = time.time() - elapsed_time
     return {"image": image, "elapsed_time": elapsed_time}

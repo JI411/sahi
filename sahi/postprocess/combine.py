@@ -262,7 +262,14 @@ def greedy_nmm(
         # find the areas of BBoxes according the indices in order
         rem_areas = torch.index_select(areas, dim=0, index=order)
 
-        if match_metric == "IOU":
+        if match_metric == "IOS":
+            # find the smaller area of every prediction T in P
+            # with the prediction S
+            # Note that areas[idx] represents area of S
+            smaller = torch.min(rem_areas, areas[idx])
+            # find the IoS of every prediction in P with S
+            match_metric_value = inter / smaller
+        elif match_metric == "IOU":
             # find the union of every prediction T in P
             # with the prediction S
             # Note that areas[idx] represents area of S
@@ -270,29 +277,19 @@ def greedy_nmm(
             # find the IoU of every prediction in P with S
             match_metric_value = inter / union
 
-        elif match_metric == "IOS":
-            # find the smaller area of every prediction T in P
-            # with the prediction S
-            # Note that areas[idx] represents area of S
-            smaller = torch.min(rem_areas, areas[idx])
-            # find the IoS of every prediction in P with S
-            match_metric_value = inter / smaller
         else:
             raise ValueError()
 
         # keep the boxes with IoU/IoS less than thresh_iou
         mask = match_metric_value < match_threshold
-        matched_box_indices = order[(mask == False).nonzero().flatten()].flip(dims=(0,))
-        unmatched_indices = order[(mask == True).nonzero().flatten()]
+        matched_box_indices = order[(not mask).nonzero().flatten()].flip(dims=(0,))
+        unmatched_indices = order[mask.nonzero().flatten()]
 
         # update box pool
         order = unmatched_indices[scores[unmatched_indices].argsort()]
 
         # create keep_ind to merge_ind_list mapping
-        keep_to_merge_list[idx.tolist()] = []
-
-        for matched_box_ind in matched_box_indices.tolist():
-            keep_to_merge_list[idx.tolist()].append(matched_box_ind)
+        keep_to_merge_list[idx.tolist()] = list(matched_box_indices.tolist())
 
     return keep_to_merge_list
 
@@ -406,7 +403,14 @@ def nmm(
         # find the areas of BBoxes according the indices in order
         rem_areas = torch.index_select(areas, dim=0, index=other_pred_inds)
 
-        if match_metric == "IOU":
+        if match_metric == "IOS":
+            # find the smaller area of every prediction T in P
+            # with the prediction S
+            # Note that areas[idx] represents area of S
+            smaller = torch.min(rem_areas, areas[pred_ind])
+            # find the IoS of every prediction in P with S
+            match_metric_value = inter / smaller
+        elif match_metric == "IOU":
             # find the union of every prediction T in P
             # with the prediction S
             # Note that areas[idx] represents area of S
@@ -414,19 +418,15 @@ def nmm(
             # find the IoU of every prediction in P with S
             match_metric_value = inter / union
 
-        elif match_metric == "IOS":
-            # find the smaller area of every prediction T in P
-            # with the prediction S
-            # Note that areas[idx] represents area of S
-            smaller = torch.min(rem_areas, areas[pred_ind])
-            # find the IoS of every prediction in P with S
-            match_metric_value = inter / smaller
         else:
             raise ValueError()
 
         # keep the boxes with IoU/IoS less than thresh_iou
         mask = match_metric_value < match_threshold
-        matched_box_indices = other_pred_inds[(mask == False).nonzero().flatten()].flip(dims=(0,))
+        matched_box_indices = other_pred_inds[
+            (not mask).nonzero().flatten()
+        ].flip(dims=(0,))
+
 
         # create keep_ind to merge_ind_list mapping
         if pred_ind not in merge_to_keep:

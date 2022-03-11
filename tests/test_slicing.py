@@ -19,7 +19,7 @@ class TestSlicing(unittest.TestCase):
 
         output_file_name = None
         output_dir = None
-        image_path = "tests/data/coco_utils/" + coco.images[0].file_name
+        image_path = f"tests/data/coco_utils/{coco.images[0].file_name}"
         slice_image_result = slice_image(
             image=image_path,
             coco_annotation_list=coco.images[0].annotations,

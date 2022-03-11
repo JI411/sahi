@@ -56,9 +56,8 @@ class TestYolov5DetectionModel(unittest.TestCase):
 
         # find box of first car detection with conf greater than 0.5
         for box in boxes[0]:
-            if box[5].item() == 2:  # if category car
-                if box[4].item() > 0.5:
-                    break
+            if box[5].item() == 2 and box[4].item() > 0.5:
+                break
 
         # compare
         desired_bbox = [321, 329, 378, 368]
